@@ -48,7 +48,7 @@ pub fn gun() []array_int {
 
 fn main() {
 	mut field := gun()
-	print_field(field)
+
 	for {
 		mut new_field := []array_int
 		for i, line in field {
@@ -71,9 +71,11 @@ fn main() {
 				}
 			}
 		}
-		field = new_field
+
 		print_field(field)
+		C.fflush(stdout)
 		time.sleep_ms(100)
+		field = new_field
 	}
 }
 
