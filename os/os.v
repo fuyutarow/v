@@ -1,3 +1,7 @@
+// Copyright (c) 2019 Alexander Medvednikov. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 module os
 
 #include <sys/stat.h>
@@ -100,17 +104,34 @@ pub fn file_last_mod_time(path string) time.Time {
 	return time.convert_ctime(q)
 }
 */
-// `read_lines` reads the file in `path` into an array of lines.
+// read_lines reads the file in `path` into an array of lines.
+// TODO return `?[]string` TODO implement `?[]` support
 pub fn read_lines(path string) []string {
-	return read_file_lines(path)
-}
-
-fn read_file_into_lines(path string) []string {
-	return read_file_lines(path)
+	mut res := []string
+	mut buf := [1000]byte
+	cpath := path.cstr()
+	fp := C.fopen(cpath, 'rb')
+	if isnil(fp) {
+		// TODO
+		// return error('failed to open file "$path"')
+		return res
+	}
+	for C.fgets(buf, 1000, fp) != 0 {
+		mut val := ''
+		buf[C.strlen(buf) - 1] = `\0` // eat the newline fgets() stores
+		$if windows {
+			if buf[strlen(buf)-2] == 13 {
+				buf[strlen(buf) - 2] = `\0`
+			}
+		}
+		res << tos_clone(buf)
+	}
+	C.fclose(fp)
+	return res
 }
 
 fn read_file_into_ulines(path string) []ustring {
-	lines := read_file_into_lines(path)
+	lines := read_lines(path)
 	// mut ulines := new_array(0, lines.len, sizeof(ustring))
 	mut ulines := []ustring
 	for myline in lines {
@@ -123,43 +144,6 @@ fn read_file_into_ulines(path string) []ustring {
 const (
 	BUF_SIZE = 5000
 )
-
-fn read_file_lines(path string) []string {
-	// println('read file $path into lines')
-	mut res := []string
-	# char buf[os__BUF_SIZE];
-	# FILE *fp = fopen(path.str, "rb");
-	# if (!fp)
-	{
-		println('failed to open file "$path"')
-		return res
-	}
-	# while (fgets(buf, os__BUF_SIZE, fp) != NULL)
-	{
-		mut val := ''
-		# buf[strlen(buf) - 1] = '\0'; // eat the newline fgets() stores
-	#ifdef windows
-		# if (buf[strlen(buf)-2] == 13)
-		# buf[strlen(buf) - 2] = '\0'; // eat the newline fgets() stores
-	#endif
-		// # printf("%s\n", buf);
-		# val=tos_clone(buf) ;
-		// for i := 0; i < val.len; i++ {
-		// C.printf('%d) %c %d\n', i, val.str[i], val.str[i])
-		// }
-	#ifdef windows
-		// if val.str[val.len - 1] == 13 {
-		if val[val.len - 1] == 13 {
-			// TODO
-			// val.len--
-		}
-	#endif
-		// println('QQQ read line="$val"')
-		res << val
-	}
-	# fclose(fp);
-	return res
-}
 
 fn append_to_file(file, s string) {
 	# FILE* fp = fopen(file.str, "a");
@@ -293,34 +277,26 @@ pub fn system(cmd string) string {
 	if isnil(f) {
 		println('popen $cmd failed')
 	}
-	#define MAX 1000
-	# char buf[MAX];
-	// # char* buf = malloc(MAX);
-	// j# sleep(1);
-	// # if (!fgets(buf, MAX, f)) {
-	// jprintln('first get failed')
-	// jos.print_c_errno()
-	// j# }
-	# while (fgets(buf, MAX, f) != NULL)  {
-	// # printf("popen buf=%s\n", buf);
+	max := 1000 
+	# char buf[max];
+	# while (fgets(buf, max, f) != NULL)  {
 	# res = string_add(res, tos(buf, strlen(buf)));
 	# }
-	// println(res)
 	return res.trim_space()
 }
 
 fn system_into_lines(s string) []string {
 	mut res := []string
 	cmd := '$s 2>&1'
-#ifdef windows
-	# FILE* f = _popen(cmd.str, "r");
-#else
-	# FILE* f = popen(cmd.str, "r");
-#endif
-	#define MAX 5000
-	// # char buf[MAX];
-	# char * buf = malloc(sizeof(char) * MAX);
-	# while (fgets(buf, MAX, f) != NULL)
+	max := 5000 
+	$if windows { 
+		# FILE* f = _popen(cmd.str, "r");
+	}
+	$else { 
+		# FILE* f = popen(cmd.str, "r");
+	} 
+	# char * buf = malloc(sizeof(char) * max);
+	# while (fgets(buf, max, f) != NULL)
 	{
 		val := ''
 		# buf[strlen(buf) - 1] = '\0'; // eat the newline fgets() stores
@@ -339,26 +315,29 @@ pub fn getenv(key string) string {
 	return tos2(s)
 }
 
-fn exit(reason string) {
-	println2('exit(): $reason')
-	log(reason)
-	C.exit(0)
-}
-
-fn exit1(reason string) {
-	println2('exit(): $reason')
-	C.exit(1)
+fn exit(code int) {
+	C.exit(code)
 }
 
 // `file_exists` returns true if `path` exists.
 pub fn file_exists(path string) bool {
 	// # return access( path.str, F_OK ) != -1 ;
 	res := false
-#ifdef windows
-	# res = _access( path.str, 0 ) != -1 ;
-#else
-	# res = access( path.str, 0 ) != -1 ;
-#endif
+	$if windows { 
+		# res = _access( path.str, 0 ) != -1 ;
+	}
+	$else { 
+		# res = access( path.str, 0 ) != -1 ;
+	} 
+	return res
+}
+
+pub fn dir_exists(path string) bool {
+	dir := C.opendir(path.cstr())
+	res := !isnil(dir)
+	if res {
+		C.closedir(dir)
+	}
 	return res
 }
 
@@ -369,9 +348,7 @@ pub fn mkdir(path string) {
 		C.CreateDirectory(path.cstr(), 0)
 	}
 	$else {
-		println('AAAAAAAA $$ "$path"')
 		C.mkdir(path.cstr(), 511)// S_IRWXU | S_IRWXG | S_IRWXO
-		// os.system2('mkdir -p $path')
 	}
 }
 
@@ -386,35 +363,19 @@ pub fn rm(path string) {
 	// C.unlink(path.cstr())
 }
 
+/* 
+// TODO 
 fn rmdir(path string, guard string) {
 	if !path.contains(guard) {
 		println('rmdir canceled because the path doesnt contain $guard')
 		return
 	}
-	println2('rmdir "$path"')
-#ifndef windows
-	os.system('rm -rf "$path"')
-#else
-	os.system('rmdir /s /q "$path"')
-#endif
+	$if !windows { 
+	} 
+	$else { 
+	} 
 }
-
-pub fn unzip(path, out string) {
-	$if windows {
-		// TODO native string
-		// TODO handle older Windows
-		// The only way to unzip a file without installing dependencies is to use PowerShell + .NET
-		# char *s="powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('PATH', 'OUT'); }\" ";
-		mut cmd := ''
-		# cmd = tos(s, strlen(s));
-		cmd = cmd.replace('PATH', path)
-		cmd = cmd.replace('OUT', out)
-		os.system(cmd)
-	}
-	$else {
-		os.system('unzip -o -d "$out" "$path"')
-	}
-}
+*/ 
 
 fn print_c_errno() {
 	# printf("errno=%d err='%s'\n", errno, strerror(errno));
@@ -475,16 +436,16 @@ pub fn write_file(path, text string) {
 }
 
 fn on_segfault(f voidptr) {
-#ifdef windows
-	return
-#endif
-#ifdef mac
-	# struct sigaction sa;
-	# memset(&sa, 0, sizeof(struct sigaction));
-	# sigemptyset(&sa.sa_mask);
-	# sa.sa_sigaction = f;
-	# sa.sa_flags   = SA_SIGINFO;
-	# sigaction(SIGSEGV, &sa, 0);
-#endif
+	$if windows { 
+		return
+	} 
+	$if mac { 
+		# struct sigaction sa;
+		# memset(&sa, 0, sizeof(struct sigaction));
+		# sigemptyset(&sa.sa_mask);
+		# sa.sa_sigaction = f;
+		# sa.sa_flags   = SA_SIGINFO;
+		# sigaction(SIGSEGV, &sa, 0);
+	} 
 }
 

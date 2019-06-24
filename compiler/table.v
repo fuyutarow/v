@@ -1,3 +1,7 @@
+// Copyright (c) 2019 Alexander Medvednikov. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 module main
 
 struct Table {
@@ -135,6 +139,7 @@ fn new_table(obfuscate bool) *Table {
 	t.register_type('voidptr')
 	t.register_type('va_list')
 	t.register_const('stdin', 'int', 'main', false)
+	t.register_const('stdout', 'int', 'main', false)
 	t.register_const('stderr', 'int', 'main', false)
 	t.register_type_with_parent('map_string', 'map')
 	t.register_type_with_parent('map_int', 'map')
@@ -519,7 +524,7 @@ fn (p mut Parser) satisfies_interface(interface_name, _typ string, throw bool) b
 	for method in int_typ.methods {
 		if !typ.has_method(method.name) {
 			// if throw {
-			p.error('Type "$_typ" doesnt satisfy interface "$interface_name" (method "$method.name" is not implemented)')
+			p.error('Type "$_typ" doesn\'t satisfy interface "$interface_name" (method "$method.name" is not implemented)')
 			// }
 			return false
 		}
@@ -611,7 +616,7 @@ fn (table mut Table) cgen_name(f &Fn) string {
 		}
 		old := name
 		name = 'f_$idx'
-		println2('$old ==> $name')
+		println('$old ==> $name')
 	}
 	return name
 }
@@ -630,7 +635,8 @@ fn (table &Table) cgen_name_type_pair(name, typ string) string {
 	else if typ.starts_with('fn (') {
 		T := table.find_type(typ)
 		if T.name == '' {
-			os.exit1('this should never happen')
+			println('this should never happen')
+			exit(1)
 		}
 		str_args := T.func.str_args(table)
 		return '$T.func.typ (*$name)( $str_args /*FFF*/ )'

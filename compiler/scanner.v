@@ -1,3 +1,7 @@
+// Copyright (c) 2019 Alexander Medvednikov. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 module main
 
 struct Scanner {
@@ -26,7 +30,7 @@ const (
 
 fn new_scanner(file_path string) *Scanner {
 	if !os.file_exists(file_path) {
-		panic('"$file_path" doesnt exist')
+		panic('"$file_path" doesn\'t exist')
 	}
 	scanner := &Scanner {
 		file_path: file_path
@@ -302,6 +306,11 @@ fn (s mut Scanner) scan() ScanRes {
 		return scan_res(PIPE, '')
 	case `,`:
 		return scan_res(COMMA, '')
+	case `\r`:
+		if nextc == `\n` {
+			s.pos++
+			return scan_res(NL, '')
+		}
 	case `\n`:
 		return scan_res(NL, '')
 	case `.`:
@@ -441,23 +450,22 @@ fn (s mut Scanner) scan() ScanRes {
 		}
 		return scan_res(DIV, '')
 	}
-	println2('(char code=$c) pos=$s.pos len=$s.text.len')
+	println('(char code=$c) pos=$s.pos len=$s.text.len')
 	s.error('invalid character `${c.str()}`')
 	return scan_res(EOF, '')
 }
 
 fn (s &Scanner) error(msg string) {
-	// println('!! SCANNER ERROR: $msg')
 	file := s.file_path.all_after('/')
-	println2('panic: $file:${s.line_nr + 1}')
-	println2(msg)
+	println('panic: $file:${s.line_nr + 1}')
+	println(msg)
 	// os.print_backtrace()
 	// println(file)
 	// println(s.file_path)
-	os.exit1(' ')
+	exit(1)
 }
 
-// println2('array out of bounds $idx len=$a.len')
+// println('array out of bounds $idx len=$a.len')
 // This is really bad. It needs a major clean up
 fn (s mut Scanner) ident_string() string {
 	// println("\nidentString() at char=", string(s.text[s.pos]),

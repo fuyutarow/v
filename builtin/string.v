@@ -1,9 +1,13 @@
+// Copyright (c) 2019 Alexander Medvednikov. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 module builtin
 
 // V strings are not null-terminated.
 struct string {
-	str byteptr
 pub:
+	str byteptr
 	len int
 }
 
@@ -165,37 +169,35 @@ fn (s string) ne(a string) bool {
 	return !s.eq(a)
 }
 
-// s >= a
-fn (s string) ge(a string) bool {
-	mut j := 0
+// s < a
+fn (s string) lt(a string) bool {
 	for i := 0; i < s.len; i++ {
-		if i >= a.len {
-			return true
-		}
-		if int(s[i]) < int(a[j]) {
+		if i >= a.len || s[i] > a[i] {
 			return false
 		}
-		else if int(s[i]) > int(a[j]) {
+		else if s[i] < a[i] {
 			return true
 		}
-		j++
 	}
-	return true
+	if s.len < a.len {
+		return true
+	}
+	return false
 }
 
 // s <= a
 fn (s string) le(a string) bool {
-	return !s.ge(a) || s == a
-}
-
-// s < a
-fn (s string) lt(a string) bool {
-	return s.le(a) && s != a
+	return s.lt(a) || s.eq(a)
 }
 
 // s > a
 fn (s string) gt(a string) bool {
-	return s.ge(a) && s != a
+	return !s.le(a)
+}
+
+// s >= a
+fn (s string) ge(a string) bool {
+	return !s.lt(a)
 }
 
 // TODO `fn (s string) + (a string)` ? To be consistent with operator overloading syntax.
@@ -224,7 +226,7 @@ pub fn (s string) split(delim string) []string {
 	}
 	if delim.len == 1 {
 		return s.split_single(delim[0])
-		// println2('split 1 only')
+		// println('split 1 only')
 		// os.exit()
 	}
 	mut i := 0
@@ -563,10 +565,10 @@ fn (s string) trim_right(cutset string) string {
 // //C.printf("tid = %08x \n", pthread_self());
 // }
 fn compare_strings(a, b *string) int {
-	if a.le(b) {
+	if a.lt(b) {
 		return -1
 	}
-	if a.ge(b) {
+	if a.gt(b) {
 		return 1
 	}
 	return 0

@@ -1,11 +1,11 @@
+// Copyright (c) 2019 Alexander Medvednikov. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 module builtin
 
-pub fn exit(reason string) {
-	if reason == '' {
-		panic('exit empty reason')
-	}
-	println2('exit(): $reason')
-	C.exit(0)
+pub fn exit(code int) {
+	C.exit(code)
 }
 
 // isnil returns true if an object is nil (only for C objects).
@@ -27,7 +27,7 @@ pub fn print_backtrace() {
 }
 
 pub fn panic(s string) {
-	println2('V panic: $s')
+	println('V panic: $s')
 	print_backtrace()
 	C.exit(1)
 }
@@ -49,16 +49,12 @@ pub fn eprintln(s string) {
 	}
 	// TODO issues with stderr and cross compiling for Linux
 	$else {
-		println2(s)
+		println(s)
 	}
 }
 
 pub fn print(s string) {
 	C.printf('%.*s', s.len, s.str)
-}
-
-fn println2(s string) {
-	C.printf('%.*s\n', s.len, s.str)
 }
 
 pub fn malloc(n int) byteptr {
@@ -74,7 +70,7 @@ pub fn malloc(n int) byteptr {
 	total := i64(0)
 	# total_m += n;
 	# total = total_m;
-	println2('\n\n\nmalloc($n) total=$total')
+	println('\n\n\nmalloc($n) total=$total')
 	print_backtrace()
 #endif
 	ptr := C.malloc(n)
@@ -88,7 +84,7 @@ pub fn calloc(n int) byteptr {
 	if n < 0 {
 		panic('calloc(<0)')
 	}
-	return C.calloc(sizeof(float) * n, sizeof(float))
+	return C.calloc(n, 1)
 }
 
 fn _strlen(s byteptr) int {

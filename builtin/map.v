@@ -1,3 +1,7 @@
+// Copyright (c) 2019 Alexander Medvednikov. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 module builtin
 
 struct map {
@@ -102,6 +106,15 @@ fn compare_map(a, b *Entry) int {
 pub fn (m mut map) sort() {
 	m.entries.sort_with_compare(compare_map)
 	m.is_sorted = true
+}
+
+fn (m map) keys() []string {
+	mut keys := []string{}
+	for i := 0; i < m.entries.len; i++ {
+		entry := m.entries[i]
+		keys << entry.key
+	}
+	return keys
 }
 
 fn (m map) get(key string, out voidptr) bool {

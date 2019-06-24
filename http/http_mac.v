@@ -1,12 +1,18 @@
+// Copyright (c) 2019 Alexander Medvednikov. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 module http
 
 #include <curl/curl.h>
-#flag windows -I/usr/local/opt/curl/include
 #flag darwin -lcurl
 #flag windows -lcurl
 #flag linux -lcurl
-@size_t kek
-@CURL* curl_easy_init
+
+fn C.curl_easy_init() *C.CURL 
+
+fn foo() {} 
+
 type wsfn fn (s string, ptr voidptr)
 
 struct MemoryStruct {
@@ -31,11 +37,10 @@ import const (
 	CURLOPT_POSTFIELDS
 	CURLOPT_CUSTOMREQUEST
 	CURLOPT_TCP_KEEPALIVE
+	CURLINFO_CONTENT_LENGTH_DOWNLOAD 
 	CURLE_OK
 )
 
-// type C.CURLcode {
-// }
 fn C.curl_easy_strerror(curl voidptr) byteptr
 
 fn C.curl_easy_perform(curl voidptr) C.CURLcode
@@ -73,7 +78,7 @@ fn write_fn(contents byteptr, size, nmemb int, _mem *MemoryStruct) int {
 struct C.curl_slist { }
 
 fn (req &Request) do() Response {
-	println('req.do() mac/linux url="$req.url" data="$req.data"')
+	//println('req.do() mac/linux url="$req.url" data="$req.data"')
 	// println('req.do() url="$req.url"')
 	/* 
 	mut resp := Response {
@@ -94,7 +99,7 @@ fn (req &Request) do() Response {
 	// init curl
 	curl := C.curl_easy_init()
 	if isnil(curl) {
-		println2('curl init failed')
+		println('curl init failed')
 		return Response{}
 	}
 	// options
@@ -125,7 +130,7 @@ fn (req &Request) do() Response {
 		h := '$key: $val'
 		hlist = C.curl_slist_append(hlist, h.cstr())
 	}
-	// curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,	// (long)CURL_HTTP_VERSION_2TLS);ô`CÒÊ€9À
+	// curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,	// (long)CURL_HTTP_VERSION_2TLS);ï¿½`Cï¿½Ê€9ï¿½
 	C.curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1)
 	if req.verbose {
 		C.curl_easy_setopt(curl, CURLOPT_VERBOSE, 1)
@@ -133,9 +138,9 @@ fn (req &Request) do() Response {
 	C.curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hlist)
 	C.curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1)
 	C.curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1)
-	println('bef easy()')
+	//println('bef easy()')
 	res := C.curl_easy_perform(curl)
-	println('after easy()')
+	//println('after easy()')
 	# if (res != CURLE_OK )
 	{
 		err := C.curl_easy_strerror(res)
@@ -180,7 +185,7 @@ fn (req &Request) do() Response {
 	// j.println('headers=')
 	// j.println(hchunk.strings)
 	C.curl_easy_cleanup(curl)
-	println('end of req.do() url="$req.url"')
+	//println('end of req.do() url="$req.url"')
 	return Response {
 		body: body
 	}
